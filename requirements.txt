@@ -1,0 +1,4 @@
+dropbox==11.36.0
+python-telegram-bot==8.1.1
+gspread==5.7.2
+oauth2client==4.1.3

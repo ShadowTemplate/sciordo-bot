@@ -1,0 +1,4 @@
+sciordo_bot/secrets.py
+venv/
+.idea/
+*.pyc
