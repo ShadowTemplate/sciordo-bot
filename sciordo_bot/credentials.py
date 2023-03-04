@@ -18,7 +18,7 @@ def get_credential(credential_key):
 
 
 DRIVE_SECRETS_JSON = get_credential('DRIVE_SECRETS_JSON')
-DROPBOX_ACCESS_TOKEN = get_credential('DROPBOX_ACCESS_TOKEN')
+DROPBOX_REFRESH_TOKEN = get_credential('DROPBOX_REFRESH_TOKEN')
 DROPBOX_APP_KEY = get_credential('DROPBOX_APP_KEY')
 DROPBOX_APP_SECRET = get_credential('DROPBOX_APP_SECRET')
 
