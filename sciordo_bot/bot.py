@@ -73,7 +73,7 @@ class SciordoBot:
         log.info(pretty_str(now_ms))
         now_dt = datetime.fromtimestamp(now_ms / 1000.0)
         hour = now_dt.hour
-        col = hour + 3  # offset + UTC -> CET timezone
+        col = ((hour + 1) % 24) + 2  # offset + UTC -> CET timezone
         day = now_dt.day
         row = day + 1  # offset
         return row, col
