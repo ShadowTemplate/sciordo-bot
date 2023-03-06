@@ -72,10 +72,13 @@ class SciordoBot:
         now_ms = now_utc()
         log.info(pretty_str(now_ms))
         now_dt = datetime.fromtimestamp(now_ms / 1000.0)
-        hour = now_dt.hour
-        col = ((hour + 1) % 24) + 2  # offset + UTC -> CET timezone
         day = now_dt.day
         row = day + 1  # offset
+        hour = now_dt.hour
+        if hour == 23:
+            hour = -1
+            row += 1
+        col = hour + 3  # offset + UTC -> CET timezone
         return row, col
 
     def _get_cell_from_row_col(self, row, col):
