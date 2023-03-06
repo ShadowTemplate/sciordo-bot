@@ -3,7 +3,8 @@ from datetime import date, datetime
 import telegram
 from telegram.ext import Updater
 
-from sciordo_bot.constants import BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, WORKSHITS
+from sciordo_bot.constants import BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, WORKSHITS, \
+    UK_USERS
 from sciordo_bot.credentials import SCIORDO_BOT_TOKEN, SPREADSHIT_ID
 from sciordo_bot.dropbox_service import DropboxService
 from sciordo_bot.logger import get_application_logger
@@ -68,17 +69,21 @@ class SciordoBot:
         log.debug(f"Workshit id: {workshit_id}")
         return self.spreadshit.worksheet(workshit_id)
 
-    def _get_now_coord(self):
+    def _get_now_coord(self, update):
         now_ms = now_utc()
         log.info(pretty_str(now_ms))
         now_dt = datetime.fromtimestamp(now_ms / 1000.0)
         day = now_dt.day
-        row = day + 1  # offset
+        row = day + 1  # row offset
         hour = now_dt.hour
-        if hour == 23:
+        user_id = str(update['message']['chat']['id'])
+        # handle "next day" for CET users
+        if user_id not in UK_USERS and hour == 23:
             hour = -1
             row += 1
-        col = hour + 3  # offset + UTC -> CET timezone
+        col = hour + 2  # col offset
+        if user_id not in UK_USERS:
+            col += 1  # UTC -> CET timezone
         return row, col
 
     def _get_cell_from_row_col(self, row, col):
@@ -102,24 +107,24 @@ class SciordoBot:
 
     def process_command_new_poo(self, update):
         workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord()
+        row, col = self._get_now_coord(update)
         self._log_poo(update, workshit, row, col)
 
     def process_command_new_poo_1_hr_ago(self, update):
         workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord()
+        row, col = self._get_now_coord(update)
         col -= 1
         self._log_poo(update, workshit, row, col)
 
     def process_command_new_poo_2_hrs_ago(self, update):
         workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord()
+        row, col = self._get_now_coord(update)
         col -= 2
         self._log_poo(update, workshit, row, col)
 
     def process_command_delete_last_poo(self, update):
         workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord()
+        row, col = self._get_now_coord(update)
         while col > 0:
             cell = self._get_cell_from_row_col(row, col)
             value = workshit.get(cell)
@@ -140,7 +145,7 @@ class SciordoBot:
 
     def process_command_recap_poo(self, update):
         workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord()
+        row, col = self._get_now_coord(update)
         poos = []
         while col > 1:
             cell = self._get_cell_from_row_col(row, col)
