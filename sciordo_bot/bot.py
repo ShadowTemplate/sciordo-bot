@@ -1,3 +1,4 @@
+import time
 from datetime import date, datetime
 
 import telegram
@@ -181,8 +182,12 @@ def main_loop():
     updater = Updater(token=SCIORDO_BOT_TOKEN)
     queue = updater.start_polling()
     while True:
-        update = queue.get()
-        bot.process_update(update)
+        try:
+            update = queue.get()
+            bot.process_update(update)
+        except Exception as exc:
+            log.error(exc)
+            time.sleep(10)
 
 
 if __name__ == '__main__':
