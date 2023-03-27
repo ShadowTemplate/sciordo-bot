@@ -77,6 +77,7 @@ class SciordoBot:
         day = now_dt.day
         row = day + 1  # row offset
         hour = now_dt.hour
+        hour += 1  # legal time
         user_id = str(update['message']['chat']['id'])
         # handle "next day" for CET users
         if user_id not in UK_USERS and hour == 23:
