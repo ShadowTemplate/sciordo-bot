@@ -22,7 +22,7 @@ class SciordoBot:
         self._sheet = sheet
         self.spreadshit = sheet.get_sheet(SPREADSHIT_ID)
 
-    def update_inline_keyboard(self, user_id):
+    def update_inline_keyboard(self, chat_id):
         kb = [
             [telegram.KeyboardButton(command)] for command in BOT_COMMANDS
         ]
@@ -31,7 +31,7 @@ class SciordoBot:
         for command, info in BOT_COMMANDS.items():
             message += f"\n\n{command}: {info[1]}"
         self._bot.send_message(
-            chat_id=user_id,
+            chat_id=chat_id,
             text=message,
             reply_markup=kb_markup
         )
@@ -63,14 +63,13 @@ class SciordoBot:
         self._storage.create_file(update_file)
         log.info(f"Stored update_id.")
 
-    def get_current_workshit(self, update):
-        sender_id = str(update['message']['chat']['id'])
+    def get_current_workshit(self, chat_id):
         month = date.today().month
-        workshit_id = f"{month}.{WORKSHITS[sender_id]}"
+        workshit_id = f"{month}.{WORKSHITS[chat_id]}"
         log.debug(f"Workshit id: {workshit_id}")
         return self.spreadshit.worksheet(workshit_id)
 
-    def _get_now_coord(self, update):
+    def _get_now_coord(self, chat_id):
         now_ms = now_utc()
         log.info(pretty_str(now_ms))
         now_dt = datetime.fromtimestamp(now_ms / 1000.0)
@@ -78,55 +77,64 @@ class SciordoBot:
         row = day + 1  # row offset
         hour = now_dt.hour
         hour += 1  # legal time
-        user_id = str(update['message']['chat']['id'])
         # handle "next day" for CET users
-        if user_id not in UK_USERS and hour == 23:
+        if chat_id not in UK_USERS and hour == 23:
             hour = -1
             row += 1
         col = hour + 2  # col offset
-        if user_id not in UK_USERS:
+        if chat_id not in UK_USERS:
             col += 1  # UTC -> CET timezone
         return row, col
 
     def _get_cell_from_row_col(self, row, col):
         return f"{chr(ord('@') + col)}{row}"
 
-    def _log_poo(self, update, workshit, row, col):
+    def _log_poo(self, chat_id, workshit, row, col):
         cell = self._get_cell_from_row_col(row, col)
-        log.info(f"Logging poo for {update['message']['chat']['id']} at {cell}...")
+        log.info(f"Logging poo for {chat_id} at {cell}...")
         value = workshit.get(cell)
         if not value:
             value = ''
         else:
             value = value[0][0]
         workshit.update_cell(row=row, col=col, value=value + '💩')
-        log.info(f"Logged poo for {update['message']['chat']['id']} at {cell}.")
+        log.info(f"Logged poo for {chat_id} at {cell}.")
         self._bot.send_message(
-            chat_id=update['message']['chat']['id'],
+            chat_id=chat_id,
             text=f"Loggata una 💩 tra le {col - 2}.00 e le {col - 1}.00!"
                  f"\n\nÈ bello cagare! 🐦",
         )
 
     def process_command_new_poo(self, update):
-        workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord(update)
-        self._log_poo(update, workshit, row, col)
+        chat_id = str(update['message']['chat']['id'])
+        workshit = self.get_current_workshit(chat_id)
+        row, col = self._get_now_coord(chat_id)
+        self._log_poo(chat_id, workshit, row, col)
 
     def process_command_new_poo_1_hr_ago(self, update):
-        workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord(update)
+        chat_id = str(update['message']['chat']['id'])
+        workshit = self.get_current_workshit(chat_id)
+        row, col = self._get_now_coord(chat_id)
         col -= 1
-        self._log_poo(update, workshit, row, col)
+        if col <= 1:
+            row -= 1
+            col += 24
+        self._log_poo(chat_id, workshit, row, col)
 
     def process_command_new_poo_2_hrs_ago(self, update):
-        workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord(update)
+        chat_id = str(update['message']['chat']['id'])
+        workshit = self.get_current_workshit(chat_id)
+        row, col = self._get_now_coord(chat_id)
         col -= 2
-        self._log_poo(update, workshit, row, col)
+        if col <= 1:
+            row -= 1
+            col += 24
+        self._log_poo(chat_id, workshit, row, col)
 
     def process_command_delete_last_poo(self, update):
-        workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord(update)
+        chat_id = str(update['message']['chat']['id'])
+        workshit = self.get_current_workshit(chat_id)
+        row, col = self._get_now_coord(chat_id)
         while col > 0:
             cell = self._get_cell_from_row_col(row, col)
             value = workshit.get(cell)
@@ -137,17 +145,18 @@ class SciordoBot:
             value = value[0][0]
             log.info(f"Deleting poo for {update['message']['chat']['id']} at {cell}...")
             workshit.update_cell(row=row, col=col, value=value[:-1])
-            log.info(f"Deleted poo for {update['message']['chat']['id']} at {cell}.")
+            log.info(f"Deleted poo for {chat_id} at {cell}.")
             self._bot.send_message(
-                chat_id=update['message']['chat']['id'],
+                chat_id=chat_id,
                 text=f"Cancellata una 💩 tra le {col - 2}.00 e le {col - 1}.00!"
                      f"\n\nCagare è una trasformazione irreversibile! 🐦",
             )
             break
 
     def process_command_recap_poo(self, update):
-        workshit = self.get_current_workshit(update)
-        row, col = self._get_now_coord(update)
+        chat_id = str(update['message']['chat']['id'])
+        workshit = self.get_current_workshit(chat_id)
+        row, col = self._get_now_coord(chat_id)
         poos = []
         while col > 1:
             cell = self._get_cell_from_row_col(row, col)
@@ -162,17 +171,33 @@ class SciordoBot:
             [f"{hour}.00 - {hour + 1}.00: {value}" for hour, value in poos]
         )
         self._bot.send_message(
-            chat_id=update['message']['chat']['id'],
+            chat_id=chat_id,
             text=f"{message}"
                  f"\n\nNon è mai troppo tardi per cagare! 🐦",
         )
+
+    def create_workshits(self, month):
+        for user in reversed(WORKSHITS.values()):
+            new_workshit_name = f"{month}.{user}"
+            log.debug(f"Creating new workshit {new_workshit_name}...")
+            workshit_id = f"{month - 1}.{user}"
+            old_workshit = self.spreadshit.worksheet(workshit_id)
+            old_workshit.duplicate(
+                insert_sheet_index=0,
+                new_sheet_name=new_workshit_name,
+            )
+            log.debug(f"Created new workshit {new_workshit_name}.")
 
 def main():
     storage = DropboxService()
     sheet = SheetService()
     bot = SciordoBot(storage, sheet)
-    for user in WORKSHITS:
-        bot.update_inline_keyboard(user)
+    # fake_update = {'message': {'chat': {'id': 45845150}}}
+    # bot.process_command_new_poo_2_hrs_ago(fake_update)
+    # bot.create_workshits(4)
+    # for user in WORKSHITS:
+        # if user == '593072857':
+        #     bot.update_inline_keyboard(user)
     # bot.process_batch_updates()
 
 
