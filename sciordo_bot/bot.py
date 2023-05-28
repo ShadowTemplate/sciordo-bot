@@ -1,8 +1,6 @@
-import time
 from datetime import date, datetime
 
 import telegram
-from telegram.ext import Updater
 
 from sciordo_bot.constants import BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, WORKSHITS, \
     UK_USERS
@@ -197,35 +195,3 @@ class SciordoBot:
                 new_sheet_name=new_workshit_name,
             )
             log.debug(f"Created new workshit {new_workshit_name}.")
-
-def main():
-    storage = DropboxService()
-    sheet = SheetService()
-    bot = SciordoBot(storage, sheet)
-    # fake_update = {'message': {'chat': {'id': 45845150}}}
-    # bot.process_command_new_poo_2_hrs_ago(fake_update)
-    # bot.create_workshits(4)
-    # for user in WORKSHITS:
-        # if user == '593072857':
-        #     bot.update_inline_keyboard(user)
-    # bot.process_batch_updates()
-
-
-def main_loop():
-    storage = DropboxService()
-    sheet = SheetService()
-    bot = SciordoBot(storage, sheet)
-    updater = Updater(token=SCIORDO_BOT_TOKEN)
-    queue = updater.start_polling()
-    while True:
-        try:
-            update = queue.get()
-            bot.process_update(update)
-        except Exception as exc:
-            log.error(exc)
-            time.sleep(10)
-
-
-if __name__ == '__main__':
-    # main()
-    main_loop()
