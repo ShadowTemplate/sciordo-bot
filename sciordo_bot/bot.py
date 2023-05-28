@@ -56,7 +56,7 @@ class SciordoBot:
                 chat_id=45845150,
                 text=f"Update from unknown user: {update}.",
             )
-        elif hasattr(update.message, 'from_user') and update.message.from_user.id not in WORKSHITS.keys():
+        elif hasattr(update.message, 'from_user') and str(update.message.from_user.id) not in WORKSHITS.keys():
             self._bot.send_message(
                 chat_id=45845150,
                 text=f"Update from unknown user: {update.message}.",
