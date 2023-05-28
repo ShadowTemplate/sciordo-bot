@@ -51,7 +51,17 @@ class SciordoBot:
             log.info(f"Skipping already processed message...")
             return
         log.info(f"Processing new message...")
-        if hasattr(update, 'message') and hasattr(update.message, 'text'):
+        if not hasattr(update, 'message'):
+            self._bot.send_message(
+                chat_id=45845150,
+                text=f"Update from unknown user: {update}.",
+            )
+        elif hasattr(update.message, 'from_user') and update.message.from_user.id not in WORKSHITS.keys():
+            self._bot.send_message(
+                chat_id=45845150,
+                text=f"Update from unknown user: {update.message}.",
+            )
+        elif hasattr(update.message, 'text'):
             if update.message.text in BOT_COMMANDS:
                 log.info(f"Processing command...")
                 method_name = f"process_command_{BOT_COMMANDS[update.message.text][0]}"
