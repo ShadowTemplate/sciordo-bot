@@ -17,11 +17,13 @@ def main():
     storage = DropboxService()
     sheet = SheetService()
     bot = SciordoBot(storage, sheet)
+    # bot.create_workshits(6)
+    # for user in WORKSHITS:
+    #     if user == '276697560' or user == '255377477' or user == '691801776':
+    #         bot.update_inline_keyboard(user)
+
     fake_update = {'message': {'chat': {'id': 45845150}}}
     # bot.process_command_new_poo_2_hrs_ago(fake_update)
-    # for user in WORKSHITS:
-    #     if user == '101601579' or user == '771596583':
-    #         bot.update_inline_keyboard(user)
     # bot.process_batch_updates()
 
 
