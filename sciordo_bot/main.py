@@ -17,10 +17,10 @@ def main():
     storage = DropboxService()
     sheet = SheetService()
     bot = SciordoBot(storage, sheet)
-    # bot.create_workshits(6)
-    # for user in WORKSHITS:
-    #     if user == '276697560' or user == '255377477' or user == '691801776':
-    #         bot.update_inline_keyboard(user)
+    for user in WORKSHITS:
+        if user == '5866235955':
+            pass
+        #     bot.update_inline_keyboard(user)
 
     fake_update = {'message': {'chat': {'id': 45845150}}}
     # bot.process_command_new_poo_2_hrs_ago(fake_update)
@@ -49,6 +49,14 @@ def main_loop():
             time.sleep(10)
 
 
+def create_workshits(month):
+    storage = DropboxService()
+    sheet = SheetService()
+    bot = SciordoBot(storage, sheet)
+    bot.create_workshits(month)
+
+
 if __name__ == '__main__':
     # main()
+    # create_workshits(8)
     main_loop()
