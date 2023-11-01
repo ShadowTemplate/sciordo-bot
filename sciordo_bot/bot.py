@@ -84,7 +84,7 @@ class SciordoBot:
         day = now_dt.day
         row = day + 1  # row offset
         hour = now_dt.hour
-        hour += 1  # legal time
+        # hour += 1  # legal time
         # handle "next day" for CET users
         if chat_id not in UK_USERS and hour == 23:
             hour = -1
@@ -181,7 +181,8 @@ class SciordoBot:
         self._bot.send_message(
             chat_id=chat_id,
             text=f"{message}"
-                 f"\n\nNon è mai troppo tardi per cagare! 🐦",
+                 f"\n\nNon è mai troppo tardi per cagare! 🐦"
+                 f"\n\nWorkshit: {workshit.url}",
         )
 
     def create_workshits(self, month):
