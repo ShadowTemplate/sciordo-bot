@@ -1,3 +1,5 @@
+MAX_API_RETRY_ATTEMPTS = 15
+
 SECRETS_UNTRACKED_FILE = "sciordo_bot.secrets.py"
 DROPBOX_BOT_DIR_PATH = '/dev/sciordo-bot'
 DROPBOX_UPDATES_DIR_PATH = f"{DROPBOX_BOT_DIR_PATH}/updates"
@@ -33,6 +35,9 @@ WORKSHITS = {
     '193465787': 'FF',
     '41323058': 'LS',
     '5866235955': 'VG',
+    '1557344909': 'PP',
+    '189717759': 'SP',
+    '172216099': 'MB',
 }
 
 UK_USERS = ['114759301', '159727632']
