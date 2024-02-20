@@ -185,8 +185,10 @@ class SciordoBot:
                  f"\n\nWorkshit: {workshit.url}",
         )
 
-    def create_workshits(self, month):
-        for user in reversed(WORKSHITS.values()):
+    def create_workshits(self, month, active_users=None):
+        if not active_users:
+            active_users = WORKSHITS.values()
+        for user in reversed(active_users):
             new_workshit_name = f"{month}.{user}"
             log.debug(f"Creating new workshit {new_workshit_name}...")
             workshit_id = f"{month - 1}.{user}"
