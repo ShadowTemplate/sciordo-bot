@@ -191,8 +191,8 @@ class SciordoBot:
         for user in reversed(active_users):
             new_workshit_name = f"{month}.{user}"
             log.debug(f"Creating new workshit {new_workshit_name}...")
-            workshit_id = f"{month - 1}.{user}"
-            old_workshit = self.spreadshit.worksheet(workshit_id)
+            old_workshit_id = "00"
+            old_workshit = self.spreadshit.worksheet(old_workshit_id)
             old_workshit.duplicate(
                 insert_sheet_index=0,
                 new_sheet_name=new_workshit_name,
