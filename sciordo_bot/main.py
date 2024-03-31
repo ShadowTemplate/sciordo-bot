@@ -71,11 +71,12 @@ def create_workshits(month):
         "MB",
         "ED",
         "VL",
+        "FV",
     ]
     bot.create_workshits(month, active_users)
 
 
 if __name__ == '__main__':
-    main()
-    # create_workshits(2)
+    # main()
+    # create_workshits(4)
     main_loop()
