@@ -56,30 +56,21 @@ def create_workshits(month):
     bot = SciordoBot(storage, sheet)
     active_users = [
         "GT",
-        "DS",
         "CL",
         "AL",
         "CS",
         "AT",
-        "CT",
         "SF",
-        "FF",
-        # "VS",
-        "RT",
         "SC",
-        "SP",
         "PP",
-        # "MB",
-        "ED",
-        # "VL",
-        # "FV",
-        # "BB",
-        # "MT",
+        "RO",
+        "SA",
     ]
     bot.create_workshits(month, active_users)
 
 
 if __name__ == '__main__':
     # main()
-    # create_workshits(4)
+    # create_workshits(7)
     main_loop()
+    # pass
