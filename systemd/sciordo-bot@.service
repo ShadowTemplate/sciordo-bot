@@ -1,0 +1,21 @@
+# Install (host-independent): sudo cp systemd/sciordo-bot@.service /etc/systemd/system/
+#                              sudo systemctl daemon-reload
+#                              sudo systemctl enable --now sciordo-bot@<your-username>.service
+# Assumes <your-username>'s home dir contains this repo checked out as ~/sciordo-bot with a venv at ./venv.
+# Uses $HOME (set by systemd from User=) rather than the %h specifier, which does not reliably
+# resolve against User=%i on older systemd (confirmed broken on systemd 247 / Debian Bullseye).
+[Unit]
+Description=Sciordo Telegram Bot (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+ExecStartPre=/bin/sh -c 'until getent hosts google.com >/dev/null 2>&1; do sleep 1; done'
+ExecStart=/bin/sh -c 'cd "$HOME/sciordo-bot" && PYTHONPATH="$PWD" exec venv/bin/python3 sciordo_bot/main.py'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
