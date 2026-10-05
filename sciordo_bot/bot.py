@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import telegram
@@ -72,20 +72,27 @@ class SciordoBot:
         self._storage.create_file(update_file)
         log.info(f"Stored update_id.")
 
-    def _now_local(self):
-        return datetime.now(ZoneInfo(TIMEZONE))
+    def _now_local(self, hours_ago=0):
+        # subtract in UTC so the result stays correct across DST changes
+        now_dt = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
+        return now_dt.astimezone(ZoneInfo(TIMEZONE))
 
     def get_current_workshit(self, chat_id):
-        month = self._now_local().month
+        return self._get_workshit(chat_id, self._now_local())
+
+    def _get_workshit(self, chat_id, dt):
+        month = dt.month
         workshit_id = f"{month}.{WORKSHITS[chat_id]}"
         log.debug(f"Workshit id: {workshit_id}")
         return self.spreadshit.worksheet(workshit_id)
 
     def _get_now_coord(self, chat_id):
-        now_dt = self._now_local()
-        log.info(now_dt.strftime(DEFAULT_DATE_FORMAT))
-        row = now_dt.day + 1  # row offset
-        col = now_dt.hour + 2  # col offset
+        return self._get_coord(self._now_local())
+
+    def _get_coord(self, dt):
+        log.info(dt.strftime(DEFAULT_DATE_FORMAT))
+        row = dt.day + 1  # row offset
+        col = dt.hour + 2  # col offset
         return row, col
 
     def _get_cell_from_row_col(self, row, col):
@@ -107,31 +114,22 @@ class SciordoBot:
                  f"\n\nÈ bello cagare! 🐦",
         )
 
-    def process_command_new_poo(self, update):
+    def _log_poo_hours_ago(self, update, hours_ago):
         chat_id = str(update['message']['chat']['id'])
-        workshit = self.get_current_workshit(chat_id)
-        row, col = self._get_now_coord(chat_id)
+        poo_dt = self._now_local(hours_ago)
+        # the poo may belong to the previous day or month
+        workshit = self._get_workshit(chat_id, poo_dt)
+        row, col = self._get_coord(poo_dt)
         self._log_poo(chat_id, workshit, row, col)
+
+    def process_command_new_poo(self, update):
+        self._log_poo_hours_ago(update, 0)
 
     def process_command_new_poo_1_hr_ago(self, update):
-        chat_id = str(update['message']['chat']['id'])
-        workshit = self.get_current_workshit(chat_id)
-        row, col = self._get_now_coord(chat_id)
-        col -= 1
-        if col <= 1:
-            row -= 1
-            col += 24
-        self._log_poo(chat_id, workshit, row, col)
+        self._log_poo_hours_ago(update, 1)
 
     def process_command_new_poo_2_hrs_ago(self, update):
-        chat_id = str(update['message']['chat']['id'])
-        workshit = self.get_current_workshit(chat_id)
-        row, col = self._get_now_coord(chat_id)
-        col -= 2
-        if col <= 1:
-            row -= 1
-            col += 24
-        self._log_poo(chat_id, workshit, row, col)
+        self._log_poo_hours_ago(update, 2)
 
     def process_command_delete_last_poo(self, update):
         chat_id = str(update['message']['chat']['id'])
