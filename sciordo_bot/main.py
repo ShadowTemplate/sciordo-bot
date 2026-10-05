@@ -1,8 +1,7 @@
-import time
 from threading import Thread
 
 from telegram import Update
-from telegram.ext import Updater
+from telegram.ext import TypeHandler, Updater
 
 from sciordo_bot.bot import SciordoBot
 from sciordo_bot.constants import WORKSHITS
@@ -31,27 +30,20 @@ def main():
 
 def main_loop():
     updater = Updater(token=SCIORDO_BOT_TOKEN)
-    queue = updater.start_polling()
 
     storage = DropboxService()
     sheet = SheetService()
     bot = SciordoBot(storage, sheet)
 
-    def process_update_fn(new_update):
-        bot.process_update(new_update)
+    def handle_update(_, update):
+        # one thread per update: processing them sequentially caused concurrency problems
+        Thread(target=bot.process_update, args=(update, )).start()
 
-    while True:
-        try:
-            update = queue.get()
-            if not isinstance(update, Update):
-                # the updater also queues polling errors (e.g. TimedOut), already logged
-                continue
-            thread = Thread(target=process_update_fn, args=(update, ))
-            thread.start()
-            # thread.join()  # cause concurrency problems
-        except Exception as exc:
-            log.error(exc)
-            time.sleep(10)
+    # let the dispatcher be the only consumer of the update queue: it also
+    # receives polling errors (e.g. TimedOut), already logged by the updater
+    updater.dispatcher.add_handler(TypeHandler(Update, handle_update))
+    updater.start_polling()
+    updater.idle()
 
 
 def create_workshits(month):
