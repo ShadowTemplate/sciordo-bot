@@ -65,7 +65,15 @@ class SciordoBot:
                 log.info(f"Processing command...")
                 method_name = f"process_command_{BOT_COMMANDS[update.message.text][0]}"
                 method = getattr(self, method_name)
-                method(update)
+                try:
+                    method(update)
+                except Exception:
+                    log.exception(f"Failed to process command {method_name}.")
+                    self._bot.send_message(
+                        chat_id=update.message.chat_id,
+                        text="Qualcosa è andato storto, riprova più tardi! 🐦",
+                    )
+                    return
                 log.info(f"Processed command.")
         log.info(f"Processed new message.")
         log.info(f"Storing update_id...")
