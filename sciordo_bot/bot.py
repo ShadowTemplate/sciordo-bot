@@ -1,14 +1,15 @@
-from datetime import date, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import telegram
 
 from sciordo_bot.constants import BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, WORKSHITS, \
-    UK_USERS
+    TIMEZONE
 from sciordo_bot.credentials import SCIORDO_BOT_TOKEN, SPREADSHIT_ID
 from sciordo_bot.dropbox_service import DropboxService
 from sciordo_bot.logger import get_application_logger
 from sciordo_bot.sheet_service import SheetService
-from sciordo_bot.time_utils import now_utc, pretty_str
+from sciordo_bot.time_utils import DEFAULT_DATE_FORMAT
 
 log = get_application_logger()
 
@@ -71,27 +72,20 @@ class SciordoBot:
         self._storage.create_file(update_file)
         log.info(f"Stored update_id.")
 
+    def _now_local(self):
+        return datetime.now(ZoneInfo(TIMEZONE))
+
     def get_current_workshit(self, chat_id):
-        month = date.today().month
+        month = self._now_local().month
         workshit_id = f"{month}.{WORKSHITS[chat_id]}"
         log.debug(f"Workshit id: {workshit_id}")
         return self.spreadshit.worksheet(workshit_id)
 
     def _get_now_coord(self, chat_id):
-        now_ms = now_utc()
-        log.info(pretty_str(now_ms))
-        now_dt = datetime.fromtimestamp(now_ms / 1000.0)
-        day = now_dt.day
-        row = day + 1  # row offset
-        hour = now_dt.hour
-        hour += 1  # legal time
-        # handle "next day" for CET users
-        if chat_id not in UK_USERS and hour == 23:
-            hour = -1
-            row += 1
-        col = hour + 2  # col offset
-        if chat_id not in UK_USERS:
-            col += 1  # UTC -> CET timezone
+        now_dt = self._now_local()
+        log.info(now_dt.strftime(DEFAULT_DATE_FORMAT))
+        row = now_dt.day + 1  # row offset
+        col = now_dt.hour + 2  # col offset
         return row, col
 
     def _get_cell_from_row_col(self, row, col):

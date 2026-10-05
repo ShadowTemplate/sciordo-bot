@@ -46,4 +46,4 @@ WORKSHITS = {
     '5341836818': 'SA',
 }
 
-UK_USERS = []
+TIMEZONE = "Europe/Rome"
