@@ -137,7 +137,7 @@ class SciordoBot:
         chat_id = str(update['message']['chat']['id'])
         workshit = self.get_current_workshit(chat_id)
         row, col = self._get_now_coord(chat_id)
-        while col > 0:
+        while col > 1:  # column A holds the date
             cell = self._get_cell_from_row_col(row, col)
             value = workshit.get(cell)
             if not value:
@@ -154,6 +154,11 @@ class SciordoBot:
                      f"\n\nCagare è una trasformazione irreversibile! 🐦",
             )
             break
+        else:
+            self._bot.send_message(
+                chat_id=chat_id,
+                text="Nessuna 💩 da cancellare oggi! 🐦",
+            )
 
     def process_command_recap_poo(self, update):
         chat_id = str(update['message']['chat']['id'])
