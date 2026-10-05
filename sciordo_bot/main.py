@@ -1,6 +1,7 @@
 import time
 from threading import Thread
 
+from telegram import Update
 from telegram.ext import Updater
 
 from sciordo_bot.bot import SciordoBot
@@ -42,6 +43,9 @@ def main_loop():
     while True:
         try:
             update = queue.get()
+            if not isinstance(update, Update):
+                # the updater also queues polling errors (e.g. TimedOut), already logged
+                continue
             thread = Thread(target=process_update_fn, args=(update, ))
             thread.start()
             # thread.join()  # cause concurrency problems
