@@ -1,11 +1,14 @@
+import calendar
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 from zoneinfo import ZoneInfo
 
 import telegram
+from gspread.exceptions import WorksheetNotFound
 
-from sciordo_bot.constants import BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, WORKSHITS, \
-    TIMEZONE
-from sciordo_bot.credentials import SCIORDO_BOT_TOKEN, SPREADSHIT_ID
+from sciordo_bot.constants import ADMIN_CHAT_ID, BOT_COMMANDS, DROPBOX_UPDATES_DIR_PATH, \
+    NEXT_MONTH_WORKSHITS_DAY, WORKSHIT_TEMPLATE, WORKSHITS, TIMEZONE
+from sciordo_bot.credentials import SCIORDO_BOT_TOKEN, SPREADSHIT_IDS
 from sciordo_bot.dropbox_service import DropboxService
 from sciordo_bot.logger import get_application_logger
 from sciordo_bot.sheet_service import SheetService
@@ -19,7 +22,9 @@ class SciordoBot:
         self._bot = telegram.Bot(token=SCIORDO_BOT_TOKEN)
         self._storage = storage
         self._sheet = sheet
-        self.spreadshit = sheet.get_sheet(SPREADSHIT_ID)
+        self._spreadshits = {}  # by year
+        # updates are processed in parallel: don't create the same workshit twice
+        self._workshit_creation_lock = Lock()
 
     def update_inline_keyboard(self, chat_id):
         kb = [
@@ -52,12 +57,12 @@ class SciordoBot:
         log.info(f"Processing new message...")
         if not hasattr(update, 'message'):
             self._bot.send_message(
-                chat_id=45845150,
+                chat_id=ADMIN_CHAT_ID,
                 text=f"Update from unknown user: {update}.",
             )
         elif hasattr(update.message, 'from_user') and str(update.message.from_user.id) not in WORKSHITS.keys():
             self._bot.send_message(
-                chat_id=45845150,
+                chat_id=ADMIN_CHAT_ID,
                 text=f"Update from unknown user: {update.message}.",
             )
         elif hasattr(update.message, 'text'):
@@ -88,11 +93,58 @@ class SciordoBot:
     def get_current_workshit(self, chat_id):
         return self._get_workshit(chat_id, self._now_local())
 
+    def _get_spreadshit(self, year):
+        if year not in self._spreadshits:
+            if year not in SPREADSHIT_IDS:
+                raise KeyError(f"No spreadshit configured for {year}.")
+            self._spreadshits[year] = self._sheet.get_sheet(SPREADSHIT_IDS[year])
+        return self._spreadshits[year]
+
     def _get_workshit(self, chat_id, dt):
-        month = dt.month
-        workshit_id = f"{month}.{WORKSHITS[chat_id]}"
+        user = WORKSHITS[chat_id]
+        workshit_id = f"{dt.month}.{user}"
         log.debug(f"Workshit id: {workshit_id}")
-        return self.spreadshit.worksheet(workshit_id)
+        try:
+            return self._get_spreadshit(dt.year).worksheet(workshit_id)
+        except WorksheetNotFound:
+            # first poo of the month of a user dropped for inactivity
+            return self._create_workshit(dt.year, dt.month, user)
+
+    def _create_workshit(self, year, month, user):
+        spreadshit = self._get_spreadshit(year)
+        workshit_id = f"{month}.{user}"
+        with self._workshit_creation_lock:
+            try:  # another thread may have created it in the meantime
+                return spreadshit.worksheet(workshit_id)
+            except WorksheetNotFound:
+                pass
+            log.info(f"Creating new workshit {workshit_id}...")
+            template = self._get_workshit_template(year)
+            workshit = template.duplicate(
+                insert_sheet_index=0,
+                new_sheet_name=workshit_id,
+            )
+            # the dates in column A are computed from the month name in A1
+            workshit.update_acell('A1', calendar.month_name[month])
+            log.info(f"Created new workshit {workshit_id}.")
+            return workshit
+
+    def _get_workshit_template(self, year):
+        spreadshit = self._get_spreadshit(year)
+        try:
+            return spreadshit.worksheet(WORKSHIT_TEMPLATE)
+        except WorksheetNotFound:
+            pass
+        # a new year's spreadshit starts empty: copy the previous year's template
+        log.info(f"Copying the workshit template to the {year} spreadshit...")
+        previous_template = self._get_spreadshit(year - 1).worksheet(WORKSHIT_TEMPLATE)
+        copied = previous_template.copy_to(spreadshit.id)
+        template = spreadshit.get_worksheet_by_id(copied['sheetId'])
+        template.update_title(WORKSHIT_TEMPLATE)
+        # the dates in column A are computed from the year in A33
+        template.update_acell('A33', year)
+        log.info(f"Copied the workshit template to the {year} spreadshit.")
+        return template
 
     def _get_now_coord(self, chat_id):
         return self._get_coord(self._now_local())
@@ -190,16 +242,44 @@ class SciordoBot:
                  f"\n\nWorkshit: {workshit.url}",
         )
 
-    def create_workshits(self, month, active_users=None):
-        if not active_users:
-            active_users = WORKSHITS.values()
-        for user in reversed(active_users):
-            new_workshit_name = f"{month}.{user}"
-            log.debug(f"Creating new workshit {new_workshit_name}...")
-            old_workshit_id = "00"
-            old_workshit = self.spreadshit.worksheet(old_workshit_id)
-            old_workshit.duplicate(
-                insert_sheet_index=0,
-                new_sheet_name=new_workshit_name,
+    def create_next_month_workshits(self, _bot=None, _job=None):
+        # runs daily as a job: retrying on the following days is harmless,
+        # because existing workshits are skipped
+        now_dt = self._now_local()
+        if now_dt.day < NEXT_MONTH_WORKSHITS_DAY:
+            return
+        try:
+            created, dropped = self._create_next_month_workshits(now_dt)
+        except Exception:
+            log.exception("Failed to create next month's workshits.")
+            self._bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text="Failed to create next month's workshits, check the logs.",
             )
-            log.debug(f"Created new workshit {new_workshit_name}.")
+            return
+        if created:
+            self._bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=f"Created next month's workshits for: {', '.join(created)}."
+                     f"\n\nDropped for inactivity: {', '.join(dropped) or 'none'}.",
+            )
+
+    def _create_next_month_workshits(self, now_dt):
+        next_dt = (now_dt.replace(day=1) + timedelta(days=32)).replace(day=1)
+        spreadshit = self._get_spreadshit(now_dt.year)
+        workshit_ids = {ws.title for ws in spreadshit.worksheets()}
+        users = [u for u in WORKSHITS.values() if f"{now_dt.month}.{u}" in workshit_ids]
+        if not users:
+            return [], []
+        # Z33 holds the month's total of poos
+        response = spreadshit.values_batch_get([f"'{now_dt.month}.{u}'!Z33" for u in users])
+        poos = [int(r.get('values', [['0']])[0][0] or 0) for r in response['valueRanges']]
+        active = [u for u, p in zip(users, poos) if p > 0]
+        dropped = [u for u, p in zip(users, poos) if p == 0]
+
+        next_workshit_ids = {ws.title for ws in self._get_spreadshit(next_dt.year).worksheets()}
+        created = [u for u in active if f"{next_dt.month}.{u}" not in next_workshit_ids]
+        # each workshit is inserted first: create them in reverse to keep the users' order
+        for user in reversed(created):
+            self._create_workshit(next_dt.year, next_dt.month, user)
+        return created, dropped

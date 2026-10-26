@@ -1,6 +1,6 @@
 from tempfile import NamedTemporaryFile
 import gspread
-from sciordo_bot.credentials import DRIVE_SECRETS_JSON, SPREADSHIT_ID
+from sciordo_bot.credentials import DRIVE_SECRETS_JSON, SPREADSHIT_IDS
 
 from oauth2client.service_account import ServiceAccountCredentials
 from sciordo_bot.logger import get_application_logger
@@ -34,8 +34,8 @@ class SheetService:
 
 def main():
     sheets = SheetService()
-    spreadshit = sheets.get_sheet(SPREADSHIT_ID)
-    print(spreadshit)
+    for year, spreadshit_id in SPREADSHIT_IDS.items():
+        print(year, sheets.get_sheet(spreadshit_id))
 
 
 if __name__ == '__main__':

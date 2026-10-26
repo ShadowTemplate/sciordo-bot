@@ -1,3 +1,4 @@
+import json
 import os
 from importlib import import_module
 
@@ -22,5 +23,12 @@ DROPBOX_REFRESH_TOKEN = get_credential('DROPBOX_REFRESH_TOKEN')
 DROPBOX_APP_KEY = get_credential('DROPBOX_APP_KEY')
 DROPBOX_APP_SECRET = get_credential('DROPBOX_APP_SECRET')
 
-SPREADSHIT_ID = get_credential('SPREADSHIT_ID')
+def _parse_spreadshit_ids(spreadshit_ids):
+    # {year: spreadshit_id}: a dict in the secrets file, a JSON string in the environment
+    if isinstance(spreadshit_ids, str):
+        spreadshit_ids = json.loads(spreadshit_ids)
+    return {int(year): spreadshit_id for year, spreadshit_id in (spreadshit_ids or {}).items()}
+
+
+SPREADSHIT_IDS = _parse_spreadshit_ids(get_credential('SPREADSHIT_IDS'))
 SCIORDO_BOT_TOKEN = get_credential('SCIORDO_BOT_TOKEN')

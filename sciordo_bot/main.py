@@ -1,3 +1,4 @@
+from datetime import time
 from threading import Thread
 
 from telegram import Update
@@ -42,31 +43,13 @@ def main_loop():
     # let the dispatcher be the only consumer of the update queue: it also
     # receives polling errors (e.g. TimedOut), already logged by the updater
     updater.dispatcher.add_handler(TypeHandler(Update, handle_update))
+    # the job queue uses the host's local time
+    updater.job_queue.run_daily(bot.create_next_month_workshits, time(hour=10))
     updater.start_polling()
     updater.idle()
 
 
-def create_workshits(month):
-    storage = DropboxService()
-    sheet = SheetService()
-    bot = SciordoBot(storage, sheet)
-    active_users = [
-        "GT",
-        "CL",
-        "AL",
-        "CS",
-        "AT",
-        "SF",
-        "SC",
-        "PP",
-        "RO",
-        "SA",
-    ]
-    bot.create_workshits(month, active_users)
-
-
 if __name__ == '__main__':
     # main()
-    # create_workshits(7)
     main_loop()
     # pass

@@ -46,4 +46,9 @@ WORKSHITS = {
     '5341836818': 'SA',
 }
 
+ADMIN_CHAT_ID = '45845150'
+
+WORKSHIT_TEMPLATE = "00"
+NEXT_MONTH_WORKSHITS_DAY = 25  # from this day on, next month's workshits are created
+
 TIMEZONE = "Europe/Rome"
